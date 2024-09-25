@@ -4,9 +4,6 @@
 [submodule "TV_Segmentation"]
 	path = TV_Segmentation
 	url = git@github.com:jfzhang95/TV_Segmentation.git
-[submodule "histogram-python"]
-	path = histogram-python
-	url = git@github.com:Hetawk/histogram-python.git
 [submodule "fuzzy-image-contrast-enhancement"]
 	path = fuzzy-image-contrast-enhancement
 	url = git@github.com:amirreza-yar/fuzzy-image-contrast-enhancement.git
