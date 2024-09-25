@@ -1,0 +1,3 @@
+[submodule "Histogram-Equalization"]
+	path = Histogram-Equalization
+	url = git@github.com:ZahraDehghanian97/Histogram_Equalization.git
