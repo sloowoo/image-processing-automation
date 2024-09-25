@@ -4,9 +4,6 @@
 [submodule "TV_Segmentation"]
 	path = TV_Segmentation
 	url = git@github.com:jfzhang95/TV_Segmentation.git
-[submodule "fuzzy-image-contrast-enhancement"]
-	path = fuzzy-image-contrast-enhancement
-	url = git@github.com:amirreza-yar/fuzzy-image-contrast-enhancement.git
 [submodule "pyshepseg"]
 	path = pyshepseg
 	url = git@github.com:ubarsc/pyshepseg.git
@@ -16,3 +13,6 @@
 [submodule "skeleton-tracing"]
 	path = skeleton-tracing
 	url = git@github.com:LingDong-/skeleton-tracing.git
+[submodule "sharpening-filter"]
+	path = sharpening-filter
+	url = git@github.com:yoyoberenguer/sharpening-filter.git
