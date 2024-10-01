@@ -1,0 +1,156 @@
+name: CI
+on:
+  workflow_dispatch:
+  push:
+    paths-ignore:
+      - .gitignore
+      - "*.md"
+  pull_request:
+    paths-ignore:
+      - .gitignore
+      - "*.md"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container: docker.io/luigi311/low-power-image-processing-base-image:latest
+    
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          pip install py pytest-parallel
+          chmod +x download_models.sh
+          ./download_models.sh
+
+      - name: Run tests
+        run: |
+          python test/generate_images.py
+          pytest --workers auto
+
+  bench:
+    needs:
+      - test
+    runs-on: ubuntu-latest
+    container: 
+      image: docker.io/luigi311/low-power-image-processing-base-image:latest
+      options: --privileged
+
+    steps:
+      # Install git so checkout will clone via git
+      - name: Apt deps
+        run: |
+          apt-get update
+          apt-get install -y valgrind git
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          chmod +x download_models.sh
+          ./download_models.sh
+
+      - name: Run benchmarks
+        run: |
+          python test/benchmarking/cachegrind.py python all_in_one.py test/images --internal_image_extension png --histogram_method histogram_clahe --scale_down 540 --auto_stack --stack_method ECC --stack_amount 2 2> /dev/null > /dev/null
+          mv benchmark.txt /tmp/current.txt
+          cat /tmp/current.txt
+      
+      # If commit is not a pull request checkout previous commit
+      - name: Checkout previous commit (push)
+        if: github.event_name == 'push'
+        run: |
+          git config --global --add safe.directory /__w/Low-Power-Image-Processing/Low-Power-Image-Processing
+          git checkout HEAD^1
+      
+      # If commit is a pull request checkout base branch
+      - name: Checkout base branch (pull request)
+        if: github.event_name == 'pull_request'
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.base_ref }}
+
+      - name: Install deps
+        run: |
+          pip install -r requirements.txt
+          chmod +x download_models.sh
+          ./download_models.sh
+      
+      - name: Run benchmarks
+        run: |
+          rm -f test/images/*.hdf5 test/images/*.png
+          python test/benchmarking/cachegrind.py python all_in_one.py test/images --internal_image_extension png --histogram_method histogram_clahe --scale_down 540 --auto_stack --stack_method ECC --stack_amount 2 2> /dev/null > /dev/null
+          cat benchmark.txt
+
+      - name: Compare benchmarks
+        run: python test/benchmarking/compare.py benchmark.txt /tmp/current.txt
+
+  docker:
+    needs:
+      - test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Docker meta
+        id: docker_meta
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        if: "${{ env.DOCKERHUB_USERNAME != '' }}"
+        uses: docker/metadata-action@v4
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/low-power-image-processing
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to DockerHub
+        if: "${{ steps.docker_meta.outcome == 'success' }}"
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build
+        id: build
+        if: "${{ steps.docker_meta.outcome == 'skipped' }}"
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: false
+          tags: low-power-image-processing:action
+
+      - name: Build Push
+        id: build_push
+        if: "${{ steps.docker_meta.outcome == 'success' }}"
+        uses: docker/build-push-action@v3
+        with:
+          context: .
+          file: ./Dockerfile
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.docker_meta.outputs.tags }}
+          labels: ${{ steps.docker_meta.outputs.labels }}
+
+      # Echo digest so users can validate their image
+      - name: Image digest
+        if: "${{ steps.docker_meta.outcome == 'success' }}"
+        run: echo "${{ steps.build_push.outputs.digest }}"
