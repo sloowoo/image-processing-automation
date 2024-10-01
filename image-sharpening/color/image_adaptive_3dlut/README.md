@@ -1,1 +1,0 @@
-https://github.com/HuiZeng/Image-Adaptive-3DLUT
