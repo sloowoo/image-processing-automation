@@ -1,15 +1,3 @@
 [submodule "Histogram-Equalization"]
 	path = Histogram-Equalization
 	url = git@github.com:ZahraDehghanian97/Histogram_Equalization.git
-[submodule "TV_Segmentation"]
-	path = TV_Segmentation
-	url = git@github.com:jfzhang95/TV_Segmentation.git
-[submodule "pyshepseg"]
-	path = pyshepseg
-	url = git@github.com:ubarsc/pyshepseg.git
-[submodule "DocumentImageBinarization"]
-	path = DocumentImageBinarization
-	url = git@github.com:ZippoCode/DocumentImageBinarization.git
-[submodule "skeleton-tracing"]
-	path = skeleton-tracing
-	url = git@github.com:LingDong-/skeleton-tracing.git
